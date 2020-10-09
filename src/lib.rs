@@ -12,7 +12,7 @@ pub fn start() -> Result<(), JsValue> {
 	wasm_logger::init(wasm_logger::Config::default());
 
 	log::info!("starting...");
-	let game = Game::create(640, 480)?;
+	let game = Game::create(640.0, 480.0)?;
 	game.start();
 
 	Ok(())

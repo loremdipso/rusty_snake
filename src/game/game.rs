@@ -14,7 +14,7 @@ pub struct Game {
 
 impl Game {
 	// creates and initializes a new game. Might fail, so I'm avoiding the "new" keyword
-	pub fn create(width: u32, height: u32) -> Result<Game, JsValue> {
+	pub fn create(width: f64, height: f64) -> Result<Game, JsValue> {
 		let document = web_sys::window().unwrap().document().unwrap();
 		let (canvas, context) = create_canvas(&document, &document.body().unwrap())?;
 
