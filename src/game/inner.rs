@@ -343,7 +343,7 @@ impl Inner {
 
 		self.draw_circles(self.apples.iter(), APPLE_COLOR);
 
-		self.draw_rects(self.path.iter(), SNAKE_COLOR);
+		self.draw_body(self.path.iter());
 		if self.head_is_tail {
 			self.draw_rect(self.path.front().unwrap(), TAIL_COLOR);
 			self.draw_head(self.path.back().unwrap());
@@ -366,16 +366,17 @@ impl Inner {
 		Ok(())
 	}
 
-	fn draw_rects<'a, I>(&self, rects: I, color: &str)
+	fn draw_body<'a, I>(&self, rects: I)
 	where
-		I: Iterator<Item = &'a Vector2D>,
+		I: Iterator<Item = &'a Vector2D> + Clone,
 	{
+		// draw the body
 		let context = &self.context;
 		context.save();
-		context.set_fill_style(&JsValue::from(color));
+		context.set_fill_style(&JsValue::from(SNAKE_COLOR));
 		context.set_stroke_style(&JsValue::from("black"));
 		context.set_line_width(1.);
-		for pos in rects {
+		for pos in rects.clone() {
 			context.begin_path();
 			context.rect(
 				self.rect_size * pos.x as f64,
@@ -385,6 +386,64 @@ impl Inner {
 			);
 			context.fill();
 			context.stroke();
+		}
+		context.restore();
+
+		context.save();
+		// draw directions on the body
+		let context = &self.context;
+		context.save();
+		context.set_stroke_style(&JsValue::from("black"));
+		context.set_line_width(3.);
+		let mut previous_square: Option<Vector2D> = None;
+		for pos in rects {
+			if let Some(previous_square) = previous_square {
+				let tl = FVector2D {
+					x: self.rect_size * previous_square.x as f64,
+					y: self.rect_size * previous_square.y as f64,
+				};
+
+				context.save();
+				context
+					.translate(tl.x + self.rect_size / 2., tl.y + self.rect_size / 2.)
+					.unwrap();
+				// context.translate(50., 50.).unwrap();
+
+				let dx = if previous_square.x < pos.x {
+					1
+				} else if previous_square.x > pos.x {
+					-1
+				} else {
+					0
+				};
+				let dy = if previous_square.y < pos.y {
+					1
+				} else if previous_square.y > pos.y {
+					-1
+				} else {
+					0
+				};
+				let direction = Vector2D { x: dx, y: dy };
+				log::info!("{:?}", direction);
+				let angle = (Inner::get_angle(&direction) + 180.).rem_euclid(360.);
+				context.rotate(angle * f64::consts::PI / 180.).unwrap();
+
+				let x_buffer = 0.;
+				let y_buffer = 8.;
+
+				context
+					.translate(-self.rect_size / 2., -self.rect_size / 2.)
+					.unwrap();
+
+				context.set_fill_style(&JsValue::from("black"));
+				context.begin_path();
+				context.move_to(self.rect_size + x_buffer, 0. + y_buffer);
+				context.line_to(self.rect_size / 2., self.rect_size - y_buffer / 2.);
+				context.line_to(-x_buffer, 0. + y_buffer);
+				context.stroke();
+				context.restore();
+			}
+			previous_square = Some(*pos);
 		}
 		context.restore();
 	}
@@ -429,13 +488,7 @@ impl Inner {
 			.translate(tl.x + self.rect_size / 2., tl.y + self.rect_size / 2.)
 			.unwrap();
 
-		let angle = match self.head_direction {
-			Vector2D { x: 1, y: 0 } => 90.,
-			Vector2D { x: -1, y: 0 } => 270.,
-			Vector2D { x: 0, y: 1 } => 180.,
-			Vector2D { x: 0, y: -1 } => 0.,
-			_ => 0.,
-		};
+		let angle = Inner::get_angle(&self.head_direction);
 		context.rotate(angle * f64::consts::PI / 180.).unwrap();
 
 		let x_buffer = -4.;
@@ -452,6 +505,16 @@ impl Inner {
 		context.line_to(self.rect_size / 2., self.rect_size + y_buffer);
 		context.fill();
 		context.restore();
+	}
+
+	fn get_angle(direction: &Vector2D) -> f64 {
+		return match direction {
+			Vector2D { x: 1, y: 0 } => 90.,
+			Vector2D { x: -1, y: 0 } => 270.,
+			Vector2D { x: 0, y: 1 } => 180.,
+			Vector2D { x: 0, y: -1 } => 0.,
+			_ => 0.,
+		};
 	}
 
 	fn draw_circles<'a, I>(&self, circles: I, color: &str)
