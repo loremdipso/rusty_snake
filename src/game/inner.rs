@@ -11,18 +11,25 @@ use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
 pub const FPS: i32 = (0.025 * 1000.0) as i32; // 0.025 sec -> 40 fps
-const MIN_SPEED: u32 = 4; // number of frames between updates
-const MAX_SPEED: u32 = 2; // number of frames between updates
+const MIN_SPEED: u32 = 3; // number of frames between updates
+const MAX_SPEED: u32 = 1; // number of frames between updates
 
 const MAX_KEY_BUFF_LEN: usize = 3; // how many keys we'll keep track of before ignoring inputs
 const SNAKE_COLOR: &str = "green"; // how many keys we'll keep track of before ignoring inputs
 const HEAD_COLOR: &str = "yellow"; // how many keys we'll keep track of before ignoring inputs
+const TAIL_COLOR: &str = "yellow"; // how many keys we'll keep track of before ignoring inputs
 const APPLE_COLOR: &str = "red"; // how many keys we'll keep track of before ignoring inputs
 
 #[derive(Debug, Clone, Copy)]
 struct Vector2D {
 	x: i32,
 	y: i32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct FVector2D {
+	x: f64,
+	y: f64,
 }
 
 enum ICellContents {
@@ -92,7 +99,7 @@ impl Inner {
 			key_buff: VecDeque::with_capacity(MAX_KEY_BUFF_LEN),
 
 			apples: VecDeque::new(),
-			num_apples: 1,
+			num_apples: 5,
 			is_growing: false,
 
 			frames_between_updates: MIN_SPEED,
@@ -337,10 +344,12 @@ impl Inner {
 		self.draw_circles(self.apples.iter(), APPLE_COLOR);
 
 		self.draw_rects(self.path.iter(), SNAKE_COLOR);
-		if (self.head_is_tail) {
-			self.draw_rect(self.path.back().unwrap(), HEAD_COLOR);
+		if self.head_is_tail {
+			self.draw_rect(self.path.front().unwrap(), TAIL_COLOR);
+			self.draw_head(self.path.back().unwrap());
 		} else {
-			self.draw_rect(self.path.front().unwrap(), HEAD_COLOR);
+			self.draw_rect(self.path.back().unwrap(), TAIL_COLOR);
+			self.draw_head(self.path.front().unwrap());
 		}
 
 		if self.is_paused {
@@ -395,6 +404,53 @@ impl Inner {
 		);
 		context.fill();
 		context.stroke();
+		context.restore();
+	}
+
+	fn draw_head(&self, rect: &Vector2D) {
+		let tl = FVector2D {
+			x: self.rect_size * rect.x as f64,
+			y: self.rect_size * rect.y as f64,
+		};
+
+		let context = &self.context;
+		context.save();
+		context.set_fill_style(&JsValue::from(HEAD_COLOR));
+		context.set_stroke_style(&JsValue::from("black"));
+		context.set_line_width(1.);
+		context.begin_path();
+		context.rect(tl.x, tl.y, self.rect_size, self.rect_size);
+		context.fill();
+		context.stroke();
+		context.restore();
+
+		context.save();
+		context
+			.translate(tl.x + self.rect_size / 2., tl.y + self.rect_size / 2.)
+			.unwrap();
+
+		let angle = match self.head_direction {
+			Vector2D { x: 1, y: 0 } => 90.,
+			Vector2D { x: -1, y: 0 } => 270.,
+			Vector2D { x: 0, y: 1 } => 180.,
+			Vector2D { x: 0, y: -1 } => 0.,
+			_ => 0.,
+		};
+		context.rotate(angle * f64::consts::PI / 180.).unwrap();
+
+		let x_buffer = -4.;
+		let y_buffer = -4.;
+
+		context
+			.translate(-self.rect_size / 2., -self.rect_size / 2.)
+			.unwrap();
+
+		context.set_fill_style(&JsValue::from("black"));
+		context.begin_path();
+		context.move_to(-x_buffer, 0.);
+		context.line_to(self.rect_size + x_buffer, 0.);
+		context.line_to(self.rect_size / 2., self.rect_size + y_buffer);
+		context.fill();
 		context.restore();
 	}
 
@@ -463,20 +519,6 @@ impl Inner {
 			});
 		}
 		return None;
-	}
-
-	fn did_win(&mut self) -> bool {
-		for x in 0..self.num_squares_x {
-			for y in 0..self.num_squares_y {
-				match self.contents_of_square(x, y) {
-					ICellContents::Snake => {}
-					_ => {
-						return false;
-					}
-				}
-			}
-		}
-		return true;
 	}
 
 	fn get_empty_squares(&mut self) -> Vec<Vector2D> {

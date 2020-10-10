@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::{prelude::*, JsCast, JsValue};
-use web_sys::{CanvasRenderingContext2d, Document, HtmlElement};
+use web_sys::{CanvasRenderingContext2d, Document};
 
 use super::inner::{self, Inner};
 
@@ -15,7 +15,7 @@ impl Game {
 		let document = web_sys::window().unwrap().document().unwrap();
 		let width = block_size * num_cols as f64;
 		let height = block_size * num_rows as f64;
-		let (canvas, context) = create_canvas(&document, &document.body().unwrap(), width, height)?;
+		let (canvas, context) = create_canvas(&document, width, height)?;
 
 		let game = Game {
 			inner: Rc::new(RefCell::new(Inner::new(
@@ -98,12 +98,12 @@ impl Game {
 
 pub fn create_canvas(
 	document: &Document,
-	parent: &HtmlElement,
 	width: f64,
 	height: f64,
 ) -> Result<(web_sys::HtmlCanvasElement, Rc<CanvasRenderingContext2d>), JsValue> {
 	let canvas = document
-		.create_element("canvas")?
+		.get_element_by_id("snake")
+		.unwrap()
 		.dyn_into::<web_sys::HtmlCanvasElement>()?;
 	canvas.style().set_property("background-color", "black")?;
 	canvas.style().set_property("margin-left", "auto")?;
@@ -112,7 +112,6 @@ pub fn create_canvas(
 	canvas.set_attribute("tabindex", "0")?; // needed for keydown to work
 	canvas.set_width(width as u32);
 	canvas.set_height(height as u32);
-	parent.append_child(&canvas)?;
 
 	let context = Rc::new(
 		canvas
