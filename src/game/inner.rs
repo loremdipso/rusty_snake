@@ -159,7 +159,7 @@ impl Inner {
 	}
 
 	fn update(&mut self) -> Result<(), JsValue> {
-		let current_head = {
+		let mut current_head = {
 			// head will never be null
 			let head = if self.head_is_tail {
 				self.path.back().unwrap()
@@ -173,12 +173,23 @@ impl Inner {
 			}
 		};
 
-		if self.new_head_did_collide(&current_head) {
-			if self.did_win() {
-				self.is_game_over = true;
-				self.did_win = true;
-			}
-		} else {
+		if current_head.x < 0 {
+			current_head.x = self.num_squares_x - 1;
+		}
+
+		if current_head.x >= self.num_squares_x {
+			current_head.x = 0;
+		}
+
+		if current_head.y < 0 {
+			current_head.y = self.num_squares_y - 1;
+		}
+
+		if current_head.y >= self.num_squares_y {
+			current_head.y = 0;
+		}
+
+		if !self.new_head_collides_with_snake(&current_head) {
 			// move snake
 			if self.is_growing {
 				self.is_growing = false;
@@ -195,16 +206,16 @@ impl Inner {
 			} else {
 				self.path.push_front(current_head);
 			}
+		}
 
-			// remove apples
-			for apple_index in 0..self.apples.len() {
-				let apple = self.apples[apple_index];
-				if apple.x == current_head.x && apple.y == current_head.y {
-					self.apples.swap_remove_back(apple_index);
-					self.is_growing = true;
-					self.score += 1;
-					break;
-				}
+		// remove apples
+		for apple_index in 0..self.apples.len() {
+			let apple = self.apples[apple_index];
+			if apple.x == current_head.x && apple.y == current_head.y {
+				self.apples.swap_remove_back(apple_index);
+				self.is_growing = true;
+				self.score += 1;
+				break;
 			}
 		}
 
@@ -220,19 +231,15 @@ impl Inner {
 			}
 		}
 
+		if self.apples.len() == 0 {
+			self.is_game_over = true;
+			self.did_win = true;
+		}
+
 		Ok(())
 	}
 
-	fn new_head_did_collide(&mut self, new_head: &Vector2D) -> bool {
-		if new_head.x < 0
-			|| new_head.y < 0
-			|| new_head.x > self.num_squares_x
-			|| (new_head.x + 1) as f64 * self.rect_size > self.width
-			|| (new_head.y + 1) as f64 * self.rect_size > self.height
-		{
-			return true;
-		}
-
+	fn new_head_collides_with_snake(&mut self, new_head: &Vector2D) -> bool {
 		for pos in self.path.iter() {
 			if pos.x == new_head.x && pos.y == new_head.y {
 				return true;
@@ -449,7 +456,6 @@ impl Inner {
 
 	fn get_random_empty_space(&mut self) -> Option<Vector2D> {
 		let empty_squares = self.get_empty_squares();
-		log::info!("squares: {:?}", empty_squares);
 		if let Some(space) = empty_squares.choose(&mut self.rng) {
 			return Some(Vector2D {
 				x: space.x,
