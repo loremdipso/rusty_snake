@@ -393,59 +393,77 @@ impl Inner {
 		// draw directions on the body
 		let context = &self.context;
 		context.save();
-		context.set_stroke_style(&JsValue::from("black"));
+		context.set_stroke_style(&JsValue::from("white"));
 		context.set_line_width(3.);
+
 		let mut previous_square: Option<Vector2D> = None;
-		for pos in rects {
+		for current_square in rects {
 			if let Some(previous_square) = previous_square {
-				let tl = FVector2D {
-					x: self.rect_size * previous_square.x as f64,
-					y: self.rect_size * previous_square.y as f64,
+				let mut p1 = FVector2D {
+					x: self.rect_size * previous_square.x as f64 + self.rect_size / 2.,
+					y: self.rect_size * previous_square.y as f64 + self.rect_size / 2.,
+				};
+				let mut p2 = FVector2D {
+					x: self.rect_size * current_square.x as f64 + self.rect_size / 2.,
+					y: self.rect_size * current_square.y as f64 + self.rect_size / 2.,
 				};
 
-				context.save();
-				context
-					.translate(tl.x + self.rect_size / 2., tl.y + self.rect_size / 2.)
-					.unwrap();
-				// context.translate(50., 50.).unwrap();
+				// falls off right side
+				if previous_square.x == self.num_squares_x - 1 && current_square.x == 0 {
+					let oldx = p2.x;
+					p2.x = p1.x + self.rect_size;
+					Inner::draw_line(context, &p1, &p2);
+					p2.x = oldx;
+					p1.x = oldx - self.rect_size;
+					Inner::draw_line(context, &p1, &p2);
+				// falls off left side
+				} else if previous_square.x == 0 && current_square.x == self.num_squares_x - 1 {
+					// swap x's
+					let mut oldx = p2.x;
+					p2.x = p1.x;
+					p1.x = oldx;
+					oldx = p2.x;
 
-				let dx = if previous_square.x < pos.x {
-					1
-				} else if previous_square.x > pos.x {
-					-1
+					p2.x = p1.x + self.rect_size;
+					Inner::draw_line(context, &p1, &p2);
+					p2.x = oldx;
+					p1.x = oldx - self.rect_size;
+					Inner::draw_line(context, &p1, &p2);
+				// falls off top
+				} else if previous_square.y == self.num_squares_y - 1 && current_square.y == 0 {
+					let oldy = p2.y;
+					p2.y = p1.y + self.rect_size;
+					Inner::draw_line(context, &p1, &p2);
+					p2.y = oldy;
+					p1.y = oldy - self.rect_size;
+					Inner::draw_line(context, &p1, &p2);
+				// falls off bottom
+				} else if previous_square.y == 0 && current_square.y == self.num_squares_y - 1 {
+					// swap y's
+					let mut oldy = p2.y;
+					p2.y = p1.y;
+					p1.y = oldy;
+					oldy = p2.y;
+
+					p2.y = p1.y + self.rect_size;
+					Inner::draw_line(context, &p1, &p2);
+					p2.y = oldy;
+					p1.y = oldy - self.rect_size;
+					Inner::draw_line(context, &p1, &p2);
 				} else {
-					0
-				};
-				let dy = if previous_square.y < pos.y {
-					1
-				} else if previous_square.y > pos.y {
-					-1
-				} else {
-					0
-				};
-				let direction = Vector2D { x: dx, y: dy };
-				log::info!("{:?}", direction);
-				let angle = (Inner::get_angle(&direction) + 180.).rem_euclid(360.);
-				context.rotate(angle * f64::consts::PI / 180.).unwrap();
-
-				let x_buffer = 0.;
-				let y_buffer = 8.;
-
-				context
-					.translate(-self.rect_size / 2., -self.rect_size / 2.)
-					.unwrap();
-
-				context.set_fill_style(&JsValue::from("black"));
-				context.begin_path();
-				context.move_to(self.rect_size + x_buffer, 0. + y_buffer);
-				context.line_to(self.rect_size / 2., self.rect_size - y_buffer / 2.);
-				context.line_to(-x_buffer, 0. + y_buffer);
-				context.stroke();
-				context.restore();
+					Inner::draw_line(context, &p1, &p2);
+				}
 			}
-			previous_square = Some(*pos);
+			previous_square = Some(*current_square);
 		}
 		context.restore();
+	}
+
+	fn draw_line(context: &Rc<CanvasRenderingContext2d>, p1: &FVector2D, p2: &FVector2D) {
+		context.begin_path();
+		context.move_to(p1.x, p1.y);
+		context.line_to(p2.x, p2.y);
+		context.stroke();
 	}
 
 	fn draw_rect(&self, rect: &Vector2D, color: &str) {
