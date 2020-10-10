@@ -8,7 +8,7 @@ pub fn start() -> Result<(), JsValue> {
 	wasm_logger::init(wasm_logger::Config::default());
 
 	log::info!("starting...");
-	let game = Game::create(25, 20, 20.)?;
+	let game = Game::create(20, 20, 20.)?;
 	game.start()?;
 
 	Ok(())

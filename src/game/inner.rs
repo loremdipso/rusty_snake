@@ -1,23 +1,22 @@
 use rand::rngs::ThreadRng;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
-use std::cmp::max;
-use std::cmp::min;
-use std::collections::VecDeque;
-use std::f64;
-use std::rc::Rc;
+use std::{
+	cmp::{max, min},
+	collections::VecDeque,
+	f64,
+	rc::Rc,
+};
 use tau::TAU;
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
 pub const FPS: i32 = (0.025 * 1000.0) as i32; // 0.025 sec -> 40 fps
 const MIN_SPEED: u32 = 4; // number of frames between updates
-const MAX_SPEED: u32 = 3; // number of frames between updates
-
-const NUM_APPLES: usize = 1; // 10 frames between updates
+const MAX_SPEED: u32 = 2; // number of frames between updates
 
 const MAX_KEY_BUFF_LEN: usize = 3; // how many keys we'll keep track of before ignoring inputs
 const SNAKE_COLOR: &str = "green"; // how many keys we'll keep track of before ignoring inputs
+const HEAD_COLOR: &str = "yellow"; // how many keys we'll keep track of before ignoring inputs
 const APPLE_COLOR: &str = "red"; // how many keys we'll keep track of before ignoring inputs
 
 #[derive(Debug, Clone, Copy)]
@@ -50,12 +49,15 @@ pub struct Inner {
 	key_buff: VecDeque<String>,
 
 	apples: VecDeque<Vector2D>,
+	num_apples: usize,
+
 	is_growing: bool,
 
 	frames_between_updates: u32,
 	frames_until_update: u32,
 
 	head_direction: Vector2D,
+	head_is_tail: bool,
 	path: VecDeque<Vector2D>,
 
 	rng: ThreadRng,
@@ -90,12 +92,14 @@ impl Inner {
 			key_buff: VecDeque::with_capacity(MAX_KEY_BUFF_LEN),
 
 			apples: VecDeque::new(),
+			num_apples: 1,
 			is_growing: false,
 
 			frames_between_updates: MIN_SPEED,
 			frames_until_update: 0,
 
 			head_direction: Vector2D { x: 1, y: 0 },
+			head_is_tail: true,
 			path: VecDeque::new(),
 
 			rng: rand::thread_rng(),
@@ -156,45 +160,56 @@ impl Inner {
 
 	fn update(&mut self) -> Result<(), JsValue> {
 		let current_head = {
-			let head = self.path.back().unwrap(); // this will never be null
+			// head will never be null
+			let head = if self.head_is_tail {
+				self.path.back().unwrap()
+			} else {
+				self.path.front().unwrap()
+			};
+
 			Vector2D {
 				x: head.x + self.head_direction.x,
 				y: head.y + self.head_direction.y,
 			}
 		};
 
-		if self.check_game_over(&current_head) {
-			self.is_game_over = true;
-			if let None = self.get_random_empty_space() {
+		if self.new_head_did_collide(&current_head) {
+			if self.did_win() {
+				self.is_game_over = true;
 				self.did_win = true;
 			}
-			return Ok(());
-		}
-
-		// move snake
-		if self.is_growing {
-			self.is_growing = false;
 		} else {
-			self.path.pop_front();
-		}
-		self.path.push_back(current_head);
-
-		// remove apples
-		for apple_index in 0..self.apples.len() {
-			let apple = self.apples[apple_index];
-			if apple.x == current_head.x && apple.y == current_head.y {
-				self.apples.swap_remove_back(apple_index);
-				self.is_growing = true;
-				self.score += 1;
-				if self.score % 5 == 0 {
-					self.frames_between_updates = max(MAX_SPEED, self.frames_between_updates - 1);
+			// move snake
+			if self.is_growing {
+				self.is_growing = false;
+			} else {
+				if self.head_is_tail {
+					self.path.pop_front();
+				} else {
+					self.path.pop_back();
 				}
-				break;
+			}
+
+			if self.head_is_tail {
+				self.path.push_back(current_head);
+			} else {
+				self.path.push_front(current_head);
+			}
+
+			// remove apples
+			for apple_index in 0..self.apples.len() {
+				let apple = self.apples[apple_index];
+				if apple.x == current_head.x && apple.y == current_head.y {
+					self.apples.swap_remove_back(apple_index);
+					self.is_growing = true;
+					self.score += 1;
+					break;
+				}
 			}
 		}
 
 		// add missing apples
-		while self.apples.len() < NUM_APPLES {
+		while self.apples.len() < self.num_apples {
 			match self.get_random_empty_space() {
 				None => {
 					break;
@@ -208,7 +223,7 @@ impl Inner {
 		Ok(())
 	}
 
-	fn check_game_over(&mut self, new_head: &Vector2D) -> bool {
+	fn new_head_did_collide(&mut self, new_head: &Vector2D) -> bool {
 		if new_head.x < 0
 			|| new_head.y < 0
 			|| new_head.x > self.num_squares_x
@@ -249,7 +264,7 @@ impl Inner {
 					self.key_buff.pop_front();
 				}
 
-				"Enter" | " " => {
+				"Enter" => {
 					if self.is_game_over {
 						should_reset = true;
 					} else {
@@ -287,6 +302,22 @@ impl Inner {
 
 				"ArrowRight" => self.head_direction = Vector2D { x: 1, y: 0 },
 				"ArrowLeft" => self.head_direction = Vector2D { x: -1, y: 0 },
+
+				"a" => self.num_apples += 1,
+
+				// reverse head
+				" " => self.head_is_tail = !self.head_is_tail,
+
+				// slower
+				"s" => {
+					self.frames_between_updates = min(MIN_SPEED, self.frames_between_updates + 1)
+				}
+
+				// faster
+				"f" => {
+					self.frames_between_updates = max(MAX_SPEED, self.frames_between_updates - 1)
+				}
+
 				_ => {}
 			}
 		}
@@ -296,8 +327,14 @@ impl Inner {
 		let context = &self.context;
 		context.clear_rect(0., 0., self.width, self.height);
 
-		self.draw_rects(self.path.iter(), SNAKE_COLOR);
 		self.draw_circles(self.apples.iter(), APPLE_COLOR);
+
+		self.draw_rects(self.path.iter(), SNAKE_COLOR);
+		if (self.head_is_tail) {
+			self.draw_rect(self.path.back().unwrap(), HEAD_COLOR);
+		} else {
+			self.draw_rect(self.path.front().unwrap(), HEAD_COLOR);
+		}
 
 		if self.is_paused {
 			self.draw_banner("PAUSED");
@@ -333,6 +370,24 @@ impl Inner {
 			context.fill();
 			context.stroke();
 		}
+		context.restore();
+	}
+
+	fn draw_rect(&self, rect: &Vector2D, color: &str) {
+		let context = &self.context;
+		context.save();
+		context.set_fill_style(&JsValue::from(color));
+		context.set_stroke_style(&JsValue::from("black"));
+		context.set_line_width(1.);
+		context.begin_path();
+		context.rect(
+			self.rect_size * rect.x as f64,
+			self.rect_size * rect.y as f64,
+			self.rect_size,
+			self.rect_size,
+		);
+		context.fill();
+		context.stroke();
 		context.restore();
 	}
 
@@ -394,6 +449,7 @@ impl Inner {
 
 	fn get_random_empty_space(&mut self) -> Option<Vector2D> {
 		let empty_squares = self.get_empty_squares();
+		log::info!("squares: {:?}", empty_squares);
 		if let Some(space) = empty_squares.choose(&mut self.rng) {
 			return Some(Vector2D {
 				x: space.x,
@@ -401,6 +457,20 @@ impl Inner {
 			});
 		}
 		return None;
+	}
+
+	fn did_win(&mut self) -> bool {
+		for x in 0..self.num_squares_x {
+			for y in 0..self.num_squares_y {
+				match self.contents_of_square(x, y) {
+					ICellContents::Snake => {}
+					_ => {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
 	}
 
 	fn get_empty_squares(&mut self) -> Vec<Vector2D> {
