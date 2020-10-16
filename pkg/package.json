@@ -1,0 +1,15 @@
+{
+  "name": "rusty_snake",
+  "collaborators": [
+    "Michael Adams <madams@gmail.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "rusty_snake_bg.wasm",
+    "rusty_snake.js",
+    "rusty_snake.d.ts"
+  ],
+  "module": "rusty_snake.js",
+  "types": "rusty_snake.d.ts",
+  "sideEffects": false
+}

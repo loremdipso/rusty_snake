@@ -1,0 +1,89 @@
+<html>
+	<head>
+		<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+		<style>
+			h1,
+			p {
+				text-align: center;
+			}
+
+			tr:nth-child(2n) {
+				background-color: lightgrey;
+			}
+
+			table {
+				margin-left: auto;
+				margin-right: auto;
+			}
+
+			th,
+			td {
+				padding: 15px;
+			}
+
+			body {
+				display: flex;
+				justify-items: center;
+				align-items: center;
+				justify-content: space-around;
+				flex-direction: row;
+			}
+		</style>
+	</head>
+	<body>
+		<div>
+			<h1>Rust Snake Game</h1>
+			<canvas id="snake"></canvas>
+		</div>
+
+		<div>
+			<p>Rust wasm bindgen test. Also a playable snake-like game.</p>
+			<table>
+				<thead>
+					<tr>
+						<th>key</th>
+						<th>action</th>
+					</tr>
+				</thead>
+
+				<tbody>
+					<tr>
+						<td>space</td>
+						<td>swap head with tail</td>
+					</tr>
+					<tr>
+						<td>arrow keys</td>
+						<td>move</td>
+					</tr>
+					<tr>
+						<td>enter</td>
+						<td>pause</td>
+					</tr>
+					<tr>
+						<td>r</td>
+						<td>reset</td>
+					</tr>
+					<tr>
+						<td>a</td>
+						<td>add apple</td>
+					</tr>
+					<tr>
+						<td>f</td>
+						<td>speed up</td>
+					</tr>
+					<tr>
+						<td>s</td>
+						<td>slow down</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<script type="module">
+			import init from "./rusty_snake.js";
+			(async function () {
+				await init();
+			})();
+		</script>
+	</body>
+</html>
