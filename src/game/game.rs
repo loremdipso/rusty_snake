@@ -53,6 +53,7 @@ impl Game {
 					.borrow_mut()
 					.handle_key(event.key())
 					.expect("Something's gone wrong with handle key");
+				event.prevent_default();
 			}) as Box<dyn FnMut(_)>);
 			self.inner
 				.borrow_mut()
