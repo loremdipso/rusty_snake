@@ -1,7 +1,17 @@
 <html>
 	<head>
 		<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
 		<style>
+			body {
+				background-color: #f9f9f9;
+			}
+
+			* {
+				font-family: Arial, Helvetica, sans-serif;
+			}
+
 			h1,
 			p {
 				text-align: center;
@@ -25,7 +35,7 @@
 			.container {
 				justify-items: center;
 				align-items: center;
-				justify-content: space-around;
+				justify-content: center;
 				display: flex;
 				flex-wrap: wrap;
 				flex-direction: row;
@@ -98,7 +108,11 @@
 		</style>
 
 		<h1>Rust Snake Game</h1>
-		<p>Rust wasm bindgen test. Also a playable snake-like game.</p>
+		<p>Made using Web Assembly generated from Rust</p>
+		<p>
+			Helpful resources for this live
+			<a href="https://rustwasm.github.io/docs/book/" alt="WASM book">here</a>
+		</p>
 
 		<div class="container">
 			<div>

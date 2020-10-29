@@ -3,6 +3,9 @@ name = "rusty_snake"
 version = "0.1.0"
 authors = ["Michael Adams <madams@gmail.com>"]
 edition = "2018"
+description = "Simple snake-like game"
+repository = "https://github.com/loremdipso/rusty_snake"
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib"]

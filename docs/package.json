@@ -3,7 +3,13 @@
   "collaborators": [
     "Michael Adams <madams@gmail.com>"
   ],
+  "description": "Simple snake-like game",
   "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loremdipso/rusty_snake"
+  },
   "files": [
     "rusty_snake_bg.wasm",
     "rusty_snake.js",
